@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# random files on macos
+.vscode/c_cpp_properties.json
+.DS_Store
+.vscode/arduino.json
