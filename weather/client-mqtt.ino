@@ -1,3 +1,5 @@
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -12,10 +14,10 @@ const char* espName = "wireless1";
 const char* mqtt_server = "10.23.0.198";
 const char* mqtt_user = "dummyuser";
 const char* mqtt_password = "dummypass";
-const char* mqtt_clientId = "wireless1";
+const char* mqtt_clientId = "esp1";
 
 // Available Topics
-const char* topic_humidity = "esp1/humidity";
+const char* topic_altitude = "esp1/altitude";
 const char* topic_temperature = "esp1/temperature";
 const char* topic_pressure = "esp1/pressure";
 
@@ -30,6 +32,7 @@ PubSubClient client(wifiClient);
 #define FORCE_DEEPSLEEP
 
 //BME280I2C bme;
+Adafruit_BMP280 bme;
 
 /**
  * Le Setup
@@ -45,13 +48,13 @@ void setup() {
   Serial.println("---");
   Serial.println("Searching for sensor:");
   Serial.print("Result: ");
-/*
+
   while(!bme.begin())
   {
     Serial.println("Could not find BME280 sensor!");
     delay(1000);
   }
-
+/*
   switch(bme.chipModel()) {
      case BME280::ChipModel_BME280:
        Serial.println("Found BME280 sensor! Success.");
@@ -83,14 +86,14 @@ void loop() {
  * Building http-POST-request and send all necessary data              
  */
 void sendSensorData () {
-  float temp(NAN), hum(NAN), pres(NAN);
+  float temp(NAN), alt(NAN), pres(NAN);
 
-  temp = random(20,40);
-  hum = random(1000,2000);
-  pres = random(1000,2000);
+  temp = bme.readTemperature();
+  alt = bme.readAltitude(1013.25);
+  pres = bme.readPressure();
   
   client.publish(topic_temperature, String(temp).c_str(), true);
-  client.publish(topic_humidity, String(hum).c_str(), true);
+  client.publish(topic_altitude, String(alt).c_str(), true);
   client.publish(topic_pressure, String(pres).c_str(), true);
 }
 
