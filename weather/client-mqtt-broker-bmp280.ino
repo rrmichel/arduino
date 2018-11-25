@@ -1,27 +1,29 @@
 #include <ArduinoJson.h>
-#include <Adafruit_Sensor.h>
-#include <Adafruit_BMP280.h>
 #include <Wire.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
 #include <PubSubClient.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP280.h>
 
+#define SERIAL_BAUD 115200
+#define FORCE_DEEPSLEEP
+//#define DEBUG
+#define RETAINED false // losant does not accept retained messages
 
 const char* ssid = "...";
 const char* password = "...";
-const char* espName = "home1";
+const char* espName = "work1";
 
-// Endpoint settings
+// Endpoint settings (mqtt broker)
 const char* mqtt_server = "10.14.10.115";
 const char* mqtt_user = "user";
 const char* mqtt_password = "pass";
-const char* mqtt_clientId = "home1";
+const char* mqtt_clientId = "work1";
 
-// Available Topics
-const char* topic_altitude = "losant/5bf8715184a2990008742e15/altitude";
-const char* topic_temperature = "losant/5bf8715184a2990008742e15/state";
-const char* topic_pressure = "losant/5bf8715184a2990008742e15/pressure";
+// Available Topics (losant deviceid, we only need a 'state')
+const char* topic_state = "losant/5bf8715184a2990008742e15/state";
 
 // Minutes to sleep between updates
 int minutes2sleep = 1;
@@ -30,12 +32,6 @@ ESP8266WiFiMulti WiFiMulti;
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
 
-#define SERIAL_BAUD 115200
-#define FORCE_DEEPSLEEP
-//#define DEBUG
-#define RETAINED false
-
-//BME280I2C bme;
 Adafruit_BMP280 bme;
 
 /**
@@ -58,18 +54,7 @@ void setup() {
     Serial.println("Could not find BME280 sensor!");
     delay(1000);
   }
-/*
-  switch(bme.chipModel()) {
-     case BME280::ChipModel_BME280:
-       Serial.println("Found BME280 sensor! Success.");
-       break;
-     case BME280::ChipModel_BMP280:
-       Serial.println("Found BMP280 sensor! No Humidity available.");
-       break;
-     default:
-       Serial.println("Found UNKNOWN sensor! Error!");
-  }
-*/
+
   startWIFI();
 }
 
@@ -95,10 +80,6 @@ void sendSensorData () {
   temp = bme.readTemperature();
   alt = bme.readAltitude(1013.25);
   pres = bme.readPressure();
-  
-  // client.publish(topic_temperature, String(temp).c_str(), RETAINED);
-  // client.publish(topic_altitude, String(alt).c_str(), RETAINED);
-  // client.publish(topic_pressure, String(pres).c_str(), RETAINED);
 
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject();
@@ -113,7 +94,7 @@ void sendSensorData () {
   Serial.println("Sending message to MQTT topic..");
   Serial.println(JSONmessageBuffer);
  
-  if (client.publish(topic_temperature, JSONmessageBuffer, RETAINED) == true) {
+  if (client.publish(topic_state, JSONmessageBuffer, RETAINED) == true) {
     Serial.println("Success sending message");
   } else {
     Serial.println("Error sending message");
